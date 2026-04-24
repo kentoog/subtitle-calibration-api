@@ -165,7 +165,7 @@ const srtContent = lrcToSrt(lrcContent);
 在使用本 API 前，您需要：
 
 1. **准备 SRT 字幕文件** — 将原始音频通过语音识别工具转换为 `.srt` 格式
-   - 推荐工具：FunASR（高精度开源模型）、MediaToolkit（B站常用脚本）
+   - 推荐工具：FunASR（高精度开源模型）、MediaToolkit（B站有包，或站内搜索MediaToolkit）
    - 输出后缀必须为 `.srt`，无需手动修改内容
 
 2. **准备 TXT 原始文稿** — 必须包含符合朗读习惯的标点符号
