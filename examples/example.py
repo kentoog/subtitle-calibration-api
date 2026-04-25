@@ -114,7 +114,8 @@ def calibrate(srt_path, txt_path, read_parentheses=True, output_dir="."):
         if data["status"] == "pending":
             print(f"   ⏳ 排队中...")
         elif data["status"] == "processing":
-            print(f"   🔄 处理中: {data['completed']}/{data['total']}")
+            current = data.get("current_file", "")
+            print(f"   🔄 处理中: {data['completed']}/{data['total']}" + (f" — {current}" if current else ""))
         elif data["status"] == "completed":
             print(f"✅ 校准完成!")
             results = data.get("results", [])
@@ -227,7 +228,8 @@ def batch_calibrate(file_pairs, read_parentheses=True, output_dir="."):
                 return {"task_id": task_id, "results": results, "saved_files": saved_files}
 
             elif data["status"] == "processing":
-                print(f"   🔄 处理中: {data['completed']}/{data['total']}")
+                current = data.get("current_file", "")
+                print(f"   🔄 处理中: {data['completed']}/{data['total']}" + (f" — {current}" if current else ""))
 
             elif data["status"] == "error":
                 print(f"❌ 任务错误: {data.get('error')}")
