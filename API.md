@@ -73,7 +73,7 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 | 支持的输入格式 | `.srt`（字幕） + `.txt`（文稿） | |
 | 输出格式 | `.lrc`（歌词） | 可通过转换工具转为 .srt |
 | 轮询间隔建议 | ≥ 5 秒 | 建议 5 秒轮询一次任务状态 |
-| 单文件超时 | 40 秒 | 单个文件处理超过 40 秒视为超时 |
+| 单文件超时 | 10 分钟 | 单个文件处理超过 10 分钟视为超时，跳过并继续下一组 |
 
 ---
 
@@ -347,6 +347,7 @@ GET /v1/api/status/{task_id}
     "status": "processing",
     "completed": 1,
     "total": 2,
+    "current_file": "chapter1.srt",
     "results": [
         {
             "name": "example.lrc",
@@ -395,11 +396,25 @@ GET /v1/api/status/{task_id}
 }
 ```
 
+**超时错误**
+
+单个文件处理超过 10 分钟时，该文件会被跳过，任务继续处理下一组：
+
+```json
+{
+    "name": "large_file.srt",
+    "type": "ERROR",
+    "error": "处理超时 (10分钟)，已跳过",
+    "content": null
+}
+```
+
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `status` | string | 任务状态：`pending` / `processing` / `completed` / `error` |
 | `completed` | number | 已完成文件数 |
 | `total` | number | 总文件数 |
+| `current_file` | string | 当前正在处理的文件名（仅 `processing` 状态时有值） |
 | `results` | array | 结果列表 |
 | `results[].name` | string | 输出文件名（.lrc） |
 | `results[].type` | string | 结果类型：`LRC`（成功） / `ERROR`（失败） |
