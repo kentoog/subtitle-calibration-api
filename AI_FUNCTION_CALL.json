@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "description": "OpenAI Function Calling 定义 — 供 AI Agent / 大模型自动调用本 API",
+  "note": "本文件符合 OpenAI Function Calling 规范，同时兼容通义千问、文心一言、LlamaIndex、LangChain、Coze、Dify 等主流 Agent 框架。",
+
+  "functions": [
+    {
+      "type": "function",
+      "function": {
+        "name": "subtitle_calibration_align",
+        "description": "基于原始 TXT 文稿对 AI 识别生成的 SRT 字幕进行逐字校准，输出 100% 与文稿一致的 LRC 字幕，时间轴精准对齐。注意：本工具依赖原始文稿输入，不做纯音频波形对齐。适用于有完整文稿的有声书、课程、TTS 音频的字幕校对场景。",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "公共免费 API Key，每日限额 1000 次请求。公共 Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ"
+            },
+            "srt_content": {
+              "type": "string",
+              "description": "待校准的 SRT 格式字幕内容（包含行号和时间轴的标准 SRT 格式）"
+            },
+            "txt_content": {
+              "type": "string",
+              "description": "对应的原始标准 TXT 文稿，需包含规范标点符号以辅助 AI 断句"
+            },
+            "read_parentheses": {
+              "type": "boolean",
+              "description": "是否朗读括号内的旁白/说明内容，默认为 true",
+              "default": true
+            }
+          },
+          "required": ["key", "srt_content", "txt_content"]
+        }
+      }
+    }
+  ],
+
+  "api_base_url": "https://api.666082.xyz/v1",
+  "auth_scheme": "X-API-Key header",
+  "public_api_key": "sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ",
+  "rate_limit": {
+    "free_daily_quota": 1000,
+    "ip_rate_per_second": 1,
+    "quota_reset": "每日北京时间 00:00 自动重置"
+  },
+
+  "endpoints": {
+    "upload_and_analyze": {
+      "method": "POST",
+      "path": "/api/upload_analyze",
+      "content_type": "multipart/form-data",
+      "description": "上传 SRT 字幕文件 + TXT 文稿文件，返回 task_id",
+      "params": {
+        "files": "SRT 和 TXT 文件，通过同名自动配对"
+      }
+    },
+    "start_process": {
+      "method": "POST",
+      "path": "/api/start_process",
+      "content_type": "application/json",
+      "description": "启动校准任务",
+      "body": {
+        "task_id": "string (必填)",
+        "read_parentheses": "boolean (可选, 默认 true)"
+      }
+    },
+    "query_status": {
+      "method": "GET",
+      "path": "/api/status/{task_id}",
+      "description": "轮询任务状态与结果，status 为 completed 时 results[].content 包含 LRC 内容"
+    },
+    "verify_key": {
+      "method": "POST",
+      "path": "/api/verify_key",
+      "description": "验证 API Key 有效性并查询剩余配额（可选）"
+    }
+  },
+
+  "input_formats": {
+    "subtitle": ".srt (标准 SRT 字幕格式)",
+    "script": ".txt (原始文稿，需含标点符号)"
+  },
+  "output_format": {
+    "type": "LRC",
+    "description": "LRC 歌词格式，可通过 utils/ 中的转换工具转为 SRT"
+  },
+
+  "typical_use_cases": [
+    "有声书字幕校准 — 有完整文稿的 TTS 合成音频",
+    "课程视频字幕校对 — 讲师文稿与 AI 识别结果对齐",
+    "古籍/文档数字化字幕 — 原文已知场景的字幕精准修正",
+    "AI Agent 集成 — 作为 tool/function 接入大模型工作流"
+  ],
+
+  "limitations": [
+    "必须有原始 TXT 文稿，纯音频场景不适用",
+    "单文件最大 40,000 汉字",
+    "SRT 与 TXT 字数差值超过 200 字时自动跳过该文件对"
+  ],
+
+  "quick_test_curl": "curl -X POST https://api.666082.xyz/v1/api/verify_key -H \"X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ\" -H \"X-Ca-Timestamp: $(date +%s%3N)\" -H \"X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')\""
+}
