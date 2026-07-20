@@ -429,6 +429,16 @@ GET /v1/api/status/{task_id}
             "error": null,
             "content": "[00:00.00]另一段校准内容..."
         }
+    ],
+    "accuracy_results": [
+        {
+            "file": "example.lrc",
+            "status": "normal"
+        },
+        {
+            "file": "chapter1.lrc",
+            "status": "abnormal"
+        }
     ]
 }
 ```
@@ -470,6 +480,7 @@ GET /v1/api/status/{task_id}
 | `results[].type` | string | 结果类型：`LRC`（成功） / `ERROR`（失败） |
 | `results[].content` | string\|null | LRC 文件内容（成功时有值） |
 | `results[].error` | string\|null | 错误信息（失败时有值） |
+| `accuracy_results` | array | 内容匹配校验结果。仅在 `status=completed` 时返回。每个元素包含 `file`（文件名）和 `status`（`"normal"` 或 `"abnormal"`）。`abnormal` 表示该文件的原字幕与原始文稿内容可能存在缺失或错位，请检查后重新提交。 |
 
 ---
 
@@ -581,6 +592,12 @@ curl https://api.666082.xyz/v1/api/status/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
             "type": "LRC",
             "error": null,
             "content": "[00:00.50]第一句校准后的歌词\n[00:05.23]第二句校准后的歌词\n[00:10.15]第三句校准后的歌词"
+        }
+    ],
+    "accuracy_results": [
+        {
+            "file": "example.lrc",
+            "status": "normal"
         }
     ]
 }

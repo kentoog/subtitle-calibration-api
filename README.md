@@ -126,6 +126,11 @@ while True:
         for r in data["results"]:
             if r["type"] == "LRC":
                 print(r["content"])
+        # 读取内容匹配校验结果
+        accuracy = data.get("accuracy_results", [])
+        for acc in accuracy:
+            if acc["status"] == "abnormal":
+                print(f"⚠️ {acc['file']} 状态异常，请检查原字幕及原始文稿是否缺失或错位")
         break
     time.sleep(5)
 ```

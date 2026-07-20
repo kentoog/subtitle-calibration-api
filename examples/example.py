@@ -17,6 +17,9 @@
 状态轮询响应:
   status:   processing | completed | error
   results:  当 status=completed 时，LRC 内容在 results[].content 中
+  accuracy_results:  当 status=completed 时返回，每个文件的内容匹配校验状态
+                    (normal 或 abnormal)。如果结果为 abnormal，请检查原字幕
+                    及原始文稿是否缺失或错位。
 
 ========== curl 等价调用 ==========
 
@@ -169,10 +172,18 @@ def calibrate(srt_file, txt_file, output_dir="test_output"):
                         f.write(lrc_content)
                     saved_files.append(lrc_path)
 
-            return {"task_id": task_id, "saved_files": saved_files}
+            # 读取内容匹配校验结果
+            accuracy_results = status_data.get("accuracy_results", [])
+            abnormal_files = [a["file"] for a in accuracy_results if a["status"] == "abnormal"]
+            if abnormal_files:
+                print("⚠️ 以下文件状态异常，请检查原字幕及原始文稿是否缺失或错位:")
+                for f in abnormal_files:
+                    print(f"   - {f}")
+
+            return {"task_id": task_id, "saved_files": saved_files, "accuracy_results": accuracy_results}
 
         elif state in ("failed", "error"):
-            return {"task_id": task_id, "error": status_data.get("error", status_data.get("message", "处理失败"))}
+            return {"task_id": task_id, "error": status_data.get("error", status_data.get("message", "处理失败")), "accuracy_results": []}
 
         time.sleep(2)
 
