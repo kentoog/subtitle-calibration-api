@@ -126,7 +126,7 @@ while True:
         for r in data["results"]:
             if r["type"] == "LRC":
                 print(r["content"])
-        # 读取内容匹配校验结果
+        # 读取内容匹配校验结果（含异常行号 stuck_line）
         accuracy = data.get("accuracy_results", [])
         for acc in accuracy:
             if acc["status"] == "abnormal":

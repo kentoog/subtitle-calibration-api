@@ -18,8 +18,8 @@
   status:   processing | completed | error
   results:  当 status=completed 时，LRC 内容在 results[].content 中
   accuracy_results:  当 status=completed 时返回，每个文件的内容匹配校验状态
-                    (normal 或 abnormal)。如果结果为 abnormal，请检查原字幕
-                    及原始文稿是否缺失或错位。
+                    (normal 或 abnormal)，以及异常行号 stuck_line（>0 时表示校准在该行提前终止，请检查该序号附近的字幕与文稿内容）。
+                    如果结果为 abnormal，请检查原字幕及原始文稿是否缺失或错位。
 
 ========== curl 等价调用 ==========
 
