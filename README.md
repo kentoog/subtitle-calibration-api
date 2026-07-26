@@ -1,4 +1,4 @@
-# 字幕校准 API - 音文精准对齐服务
+# 字幕校准 API - 时同轨 音同文 一字不差
 
 > Subtitle Calibration API — Audio-Text Alignment Service
 >
@@ -11,7 +11,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Online-brightgreen.svg)](https://www.666082.xyz/)
 
-🌐 **在线体验**: [https://www.666082.xyz/](https://www.666082.xyz/)
+🌐 **在线体验**: [https://www.666082.xyz/](https://www.666082.xyz/) | [https://www.yzbch.cn/](https://www.yzbch.cn/)
 
 💬 **联系QQ**: 136172378
 
@@ -27,7 +27,7 @@
 
 ### 关键词
 
-`字幕校准` `音文对齐` `音文校准` `字幕同步` `歌词对齐` `TTS字幕` `语音识别校准` `subtitle calibration` `audio-text alignment`
+`时同轨` `音同文` `一字不差` `多云字幕组` `字幕校准` `音文对齐` `音文校准` `字幕同步` `歌词对齐` `TTS字幕` `语音识别校准` `subtitle calibration` `audio-text alignment`
 
 ### 核心能力
 
