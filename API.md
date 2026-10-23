@@ -227,6 +227,7 @@ POST /v1/api/upload_analyze
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `files` | File[] | 是 | SRT 和 TXT 文件，可同时上传多个 |
+| `compress` | string | 否 | 传 `gzip` 时，`files` 中各文件以 gzip 压缩内容上传，服务端自动解压；不传则按明文处理 |
 
 **文件命名规则**
 
@@ -369,6 +370,10 @@ POST /v1/api/start_process
 ### 4. 查询状态
 
 查询校准任务的执行状态和结果。**结果直接在响应中返回 LRC 内容**。
+
+**响应压缩**
+
+请求头携带 `Accept-Encoding: gzip` 时，返回处理结果的响应（处理中部分结果、completed 全量结果）以 gzip 压缩传输，响应头含 `Content-Encoding: gzip`；标准 HTTP 客户端自动解压。请求不带该头（如默认 curl）时返回明文。错误响应与无结果的小响应不压缩。
 
 **请求**
 
