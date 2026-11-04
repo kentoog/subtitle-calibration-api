@@ -13,7 +13,8 @@
 
 set -e
 
-API_BASE="https://api.666082.xyz/v1"
+API_BASE="https://api.yzbch.cn/v1"
+API_BASE_ALT="https://api.666082.xyz/v1"   # 备选入口：将上面 API_BASE 替换为此值即可
 API_KEY="sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ"
 
 SRT_FILE="${1:?错误: 请指定 SRT 文件路径，例如 ./curl_test.sh example.srt example.txt}"

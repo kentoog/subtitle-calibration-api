@@ -24,20 +24,20 @@
 ========== curl 等价调用 ==========
 
 上传文件:
-  curl -X POST https://api.666082.xyz/v1/api/upload_analyze \\
+  curl -X POST https://api.yzbch.cn/v1/api/upload_analyze \\
     -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ" \\
     -H "X-Ca-Timestamp: $(date +%%s%%3N)" \\
     -F "files=@1.srt" \\
     -F "files=@1.txt"
 
 启动校准:
-  curl -X POST https://api.666082.xyz/v1/api/start_process \\
+  curl -X POST https://api.yzbch.cn/v1/api/start_process \\
     -H "Content-Type: application/json" \\
     -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ" \\
     -d '{"task_id":"<task_id>","key":"sk-..."}'
 
 轮询状态:
-  curl https://api.666082.xyz/v1/api/status/<task_id> \\
+  curl https://api.yzbch.cn/v1/api/status/<task_id> \\
     -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ"
 """
 
@@ -46,7 +46,8 @@ import os
 import uuid
 import time
 
-API_BASE = "https://api.666082.xyz/v1"
+API_BASE = "https://api.yzbch.cn/v1"
+API_BASE_ALT = "https://api.666082.xyz/v1"  # 备选入口，可替换 API_BASE
 API_KEY = "sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ"
 
 

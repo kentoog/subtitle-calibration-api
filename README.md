@@ -7,7 +7,7 @@
 > [AI Function Call](AI_FUNCTION_CALL.json) ready for LLM / Agent integration.  
 > 🇨🇳 中文文档见下方 ↓
 
-[![API Version](https://img.shields.io/badge/API-v1.0.0-blue.svg)](https://api.666082.xyz/v1)
+[![API Version](https://img.shields.io/badge/API-v1.0.0-blue.svg)](https://api.yzbch.cn/v1)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Online-brightgreen.svg)](https://www.666082.xyz/)
 
@@ -93,7 +93,8 @@ import requests
 import time
 import uuid
 
-API_BASE = "https://api.666082.xyz/v1"
+API_BASE = "https://api.yzbch.cn/v1"
+API_BASE_ALT = "https://api.666082.xyz/v1"  # 备选入口，可替换 API_BASE
 API_KEY = "sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ"
 
 def headers():
@@ -225,7 +226,7 @@ const srtContent = lrcToSrt(lrcContent);
 
 ## 致谢
 
-- 本项目 API 服务由 [666082.xyz](https://www.666082.xyz/) 提供云端运行支持
+- 本项目 API 服务由 [yzbch.cn](https://www.yzbch.cn/) 与 [666082.xyz](https://www.666082.xyz/) 提供云端运行支持
 - 感谢所有开源语音识别与字幕处理工具的贡献者
 
 ---
@@ -278,7 +279,7 @@ const srtContent = lrcToSrt(lrcContent);
 
 ```bash
 # Step 1: 上传文件
-curl -X POST https://api.666082.xyz/v1/api/upload_analyze \
+curl -X POST https://api.yzbch.cn/v1/api/upload_analyze \
   -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ" \
   -H "X-Ca-Timestamp: $(date +%s%3N)" \
   -H "X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')" \

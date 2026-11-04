@@ -36,7 +36,8 @@
     }
   ],
 
-  "api_base_url": "https://api.666082.xyz/v1",
+  "api_base_url": "https://api.yzbch.cn/v1",
+  "api_base_url_alt": "https://api.666082.xyz/v1",
   "auth_scheme": "X-API-Key header",
   "public_api_key": "sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ",
   "rate_limit": {
@@ -99,5 +100,5 @@
     "SRT 与 TXT 字数差值超过 200 字时自动跳过该文件对"
   ],
 
-  "quick_test_curl": "curl -X POST https://api.666082.xyz/v1/api/verify_key -H \"X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ\" -H \"X-Ca-Timestamp: $(date +%s%3N)\" -H \"X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')\""
+  "quick_test_curl": "curl -X POST https://api.yzbch.cn/v1/api/verify_key -H \"X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ\" -H \"X-Ca-Timestamp: $(date +%s%3N)\" -H \"X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')\""
 }

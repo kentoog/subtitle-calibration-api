@@ -2,9 +2,10 @@
 
 > Subtitle Calibration API - Audio-Text Alignment Service
 >
-> Base URL: `https://api.666082.xyz/v1`
+> Base URL: `https://api.yzbch.cn/v1`
+> 备选 Base URL: `https://api.666082.xyz/v1`
 >
-> 在线体验: [https://www.666082.xyz/](https://www.666082.xyz/)
+> 在线体验: [https://www.666082.xyz/](https://www.666082.xyz/) | [https://www.yzbch.cn/](https://www.yzbch.cn/)
 >
 > 联系QQ: 136172378
 
@@ -522,7 +523,7 @@ GET /v1/api/status/{task_id}
 **Step 1: 上传文件**
 
 ```bash
-curl -X POST https://api.666082.xyz/v1/api/upload_analyze \
+curl -X POST https://api.yzbch.cn/v1/api/upload_analyze \
   -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ" \
   -H "X-Ca-Timestamp: $(date +%s%3N)" \
   -H "X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
@@ -545,7 +546,7 @@ curl -X POST https://api.666082.xyz/v1/api/upload_analyze \
 > ⚠️ **注意**：上传完成后需等待至少 1 秒再调用此接口，避免触发频率限制
 
 ```bash
-curl -X POST https://api.666082.xyz/v1/api/start_process \
+curl -X POST https://api.yzbch.cn/v1/api/start_process \
   -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ" \
   -H "X-Ca-Timestamp: $(date +%s%3N)" \
   -H "X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')" \
@@ -568,7 +569,7 @@ curl -X POST https://api.666082.xyz/v1/api/start_process \
 > ⚠️ **注意**：启动完成后需等待至少 1 秒再开始轮询，轮询间隔建议 ≥ 5 秒
 
 ```bash
-curl https://api.666082.xyz/v1/api/status/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+curl https://api.yzbch.cn/v1/api/status/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
   -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ" \
   -H "X-Ca-Timestamp: $(date +%s%3N)" \
   -H "X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')"
