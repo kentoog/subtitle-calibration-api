@@ -9,6 +9,11 @@
 #
 # 依赖:
 #   - curl, uuidgen (Linux/macOS 内置, Windows Git Bash 可用)
+#
+# 调用规范提示:
+#   - 本脚本演示单组文件调用；实际使用建议单次请求批量携带多组文件（≤100 文件 / 50 组），
+#     不建议多次单文件发送请求，以节省资源。
+#   - 大文件建议 gzip 压缩后上传，并在表单中附带 compress=gzip 字段（服务端自动解压）。
 # ============================================================
 
 set -e
@@ -36,11 +41,13 @@ echo "  SRT:    ${SRT_FILE}"
 echo "  TXT:    ${TXT_FILE}"
 echo "============================================"
 
-# ----- Step 0: 验证 Key（可选）-----
+# ----- Step 0: 连通性探测（不消耗校准额度）-----
+# 说明: 本 API 不提供 /api/verify_key 端点（Key 有效性在首次上传时校验）。
+# 返回 {"error":"Invalid task_id"} 即代表网络可达、鉴权头格式正确。
 echo ""
-echo "[Step 0] 验证 API Key..."
-eval curl -s $(gen_headers) "${API_BASE}/api/verify_key" | python3 -m json.tool 2>/dev/null || \
-eval curl -s $(gen_headers) "${API_BASE}/api/verify_key"
+echo "[Step 0] 连通性探测..."
+eval curl -s $(gen_headers) "${API_BASE}/api/status/probe-connectivity" | python3 -m json.tool 2>/dev/null || \
+eval curl -s $(gen_headers) "${API_BASE}/api/status/probe-connectivity"
 echo ""
 
 # ----- Step 1: 上传文件 -----
@@ -86,13 +93,13 @@ while [ ${ATTEMPT} -lt ${MAX_ATTEMPTS} ]; do
             echo ""
             echo "✅ 校准完成！结果如下："
             echo "${STATUS_RESP}" | python3 -m json.tool 2>/dev/null
-            # 保存 LRC 到文件
+            # 保存校准后的 SRT 到文件
             echo "${STATUS_RESP}" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 for r in data.get('results', []):
-    if r.get('type') == 'LRC' and r.get('content'):
-        fname = r.get('name', 'output.lrc')
+    if r.get('type') == 'SRT' and r.get('content'):
+        fname = r.get('name', 'output.srt')
         with open(fname, 'w', encoding='utf-8') as f:
             f.write(r['content'])
         print(f'  → 已保存: {fname}')

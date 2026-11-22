@@ -86,6 +86,12 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 > - 启动 → 首次轮询：≥ 1 秒
 > - 轮询间隔：≥ 5 秒
 
+> 💡 **调用规范（Agent 接入必读）**
+> - 本 API **不提供 `/api/verify_key` 等 Key 预检端点**，Key 有效性在首次上传时校验；连通性探测用 `GET /api/status/probe-connectivity`（期望 404 `Invalid task_id`，不耗额度）。
+> - **批量优先**：单次请求可携带多组 SRT+TXT 文件（≤100 文件 / 50 组，同名自动配对），不建议多次单文件发送请求，以节省资源。
+> - **建议 gzip 压缩上传**：表单附带 `compress=gzip` 字段，各文件以 gzip 压缩内容传输，服务端自动解压。
+> - 详见 [API.md · 调用规范](API.md#调用规范agent-接入必读)。
+
 ### 3. 最简示例 (Python)
 
 ```python
@@ -125,7 +131,7 @@ while True:
     data = resp.json()
     if data["status"] == "completed":
         for r in data["results"]:
-            if r["type"] == "LRC":
+            if r["type"] == "SRT":
                 print(r["content"])
         # 读取内容匹配校验结果（含异常行号 stuck_line）
         accuracy = data.get("accuracy_results", [])
@@ -153,12 +159,11 @@ while True:
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| `/v1/api/upload_analyze` | POST | 上传 SRT 字幕 + TXT 文稿 |
+| `/v1/api/upload_analyze` | POST | 上传 SRT 字幕 + TXT 文稿（支持多组批量 + gzip 压缩上传） |
 | `/v1/api/start_process` | POST | 启动校准任务 |
-| `/v1/api/status/{task_id}` | GET | 查询任务状态与结果（返回 LRC 内容） |
-| `/v1/api/verify_key` | POST | （可选）验证 API Key 及剩余配额 |
+| `/v1/api/status/{task_id}` | GET | 查询任务状态与结果（返回校准后的 SRT 内容）；亦可用作连通性探测 |
 
-> 详见 [API.md](API.md)
+> 详见 [API.md](API.md)（含调用规范：无 verify_key 端点、批量优先、gzip 压缩建议）
 
 ---
 
@@ -175,21 +180,21 @@ while True:
 
 | 类型 | 格式 | 说明 |
 |------|------|------|
-| 校准结果 | `.lrc` | LRC 歌词格式，时间轴精准对齐 |
+| 校准结果 | `.srt` | 校准后的 SRT 字幕，时间轴精准对齐，可直接使用 |
 
 ### 格式转换
 
-如需 SRT 格式，可使用本项目提供的转换工具：
+如需 LRC 格式，可使用本项目提供的转换工具：
 
 ```python
-from utils.lrc_srt_converter import lrc_to_srt
+from utils.lrc_srt_converter import srt_to_lrc
 
-srt_content = lrc_to_srt(lrc_content)
+lrc_content = srt_to_lrc(srt_content)
 ```
 
 ```javascript
-const { lrcToSrt } = require('./utils/lrc_srt_converter.js');
-const srtContent = lrcToSrt(lrcContent);
+const { srtToLrc } = require('./utils/lrc_srt_converter.js');
+const lrcContent = srtToLrc(srtContent);
 ```
 
 ---
@@ -204,7 +209,7 @@ const srtContent = lrcToSrt(lrcContent);
 | 单文件最大汉字数 | 40,000 字符 |
 | 字数差值检查 | 配对 SRT 与 TXT 字数差值超过 200 字时自动跳过 |
 | 支持的输入格式 | `.srt`（字幕） + `.txt`（文稿） |
-| 输出格式 | `.lrc`（歌词） |
+| 输出格式 | `.srt`（字幕） |
 | 文件配对规则 | 同名文件自动配对（如 `a.srt` + `a.txt`） |
 
 ---
@@ -246,7 +251,7 @@ const srtContent = lrcToSrt(lrcContent);
   "type": "function",
   "function": {
     "name": "subtitle_calibration_align",
-    "description": "基于原始 TXT 文稿对 SRT 字幕进行逐字校准，输出 100% 与原文一致的 LRC 字幕。依赖原始文稿输入，不做纯音频波形对齐。适用于有声书、课程、TTS 字幕校对。",
+    "description": "基于原始 TXT 文稿对 SRT 字幕进行逐字校准，输出 100% 与原文一致的校准后 SRT 字幕（可直接使用，也可用 utils/ 工具转 LRC）。依赖原始文稿输入，不做纯音频波形对齐。适用于有声书、课程、TTS 字幕校对。",
     "parameters": {
       "type": "object",
       "properties": {
@@ -298,7 +303,7 @@ curl -X POST https://api.yzbch.cn/v1/api/upload_analyze \
 | 需要付费吗？ | 免费，每日 1000 次请求 |
 | 需要注册账号吗？ | 不需要，直接使用公共 Key |
 | 支持哪些输入格式？ | SRT 字幕 + TXT 文稿（同名文件自动配对） |
-| 输出什么格式？ | LRC 歌词（可通过 utils/ 工具转为 SRT） |
+| 输出什么格式？ | SRT 字幕（可用 utils/ 工具转为 LRC） |
 | 和音频对齐工具有什么区别？ | 本工具只做文本校准，**依赖原始文稿**，不做波形同步 |
 | 单次最多处理多少文件？ | 最多 50 组（100 个文件） |
 | 单文件最大字数？ | 40,000 汉字 |

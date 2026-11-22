@@ -15,13 +15,13 @@
 
 - [数据处理说明](#数据处理说明)
 - [认证方式](#认证方式)
+- [调用规范（Agent 接入必读）](#调用规范agent-接入必读)
 - [请求限制](#请求限制)
 - [错误码](#错误码)
 - [接口列表](#接口列表)
-  - [验证 API Key（可选）](#1-验证-api-key可选)
-  - [上传文件](#2-上传文件)
-  - [启动校准](#3-启动校准)
-  - [查询状态](#4-查询状态)
+  - [上传文件](#1-上传文件)
+  - [启动校准](#2-启动校准)
+  - [查询状态](#3-查询状态)
 - [完整调用流程](#完整调用流程)
 - [文件配对规则](#文件配对规则)
 - [文稿格式要求](#文稿格式要求)
@@ -70,6 +70,25 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 
 ---
 
+## 调用规范（Agent 接入必读）
+
+1. **本 API 不提供 `/api/verify_key` 等 Key 预检端点。** Key 是否有效在首次上传时校验（401 即无效）。如需连通性探测，使用下方命令，期望返回 `404 {"error":"Invalid task_id"}` 即代表网络可达、鉴权头格式正确，**不消耗任何额度**：
+
+   ```bash
+   curl -s -X GET https://api.yzbch.cn/v1/api/status/probe-connectivity \
+     -H "X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ" \
+     -H "X-Ca-Timestamp: $(date +%s%3N)" \
+     -H "X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')"
+   ```
+
+2. **批量优先，避免逐文件请求。** 单次 `upload_analyze` 请求可同时携带**多组** SRT+TXT 文件（同名自动配对，单次 ≤100 个文件 / ≤50 组）。请把待校准的文件**一次性批量上传**，不建议多次单文件发送请求——批量处理一次请求完成配对校验，显著节省双方网络与服务资源。
+
+3. **建议 gzip 压缩上传。** `upload_analyze` 支持压缩上传：表单附带 `compress=gzip` 字段时，`files` 中各文件以 gzip 压缩内容传输，服务端自动解压。文本类 SRT/TXT 压缩率高，批量多文件或大文件场景建议开启，可大幅降低传输体积。
+
+4. **注意步骤间延时**（详见[请求限制](#请求限制)与[完整调用流程](#完整调用流程)）：上传 → 启动 ≥1 秒，启动 → 首次轮询 ≥1 秒，轮询间隔 ≥5 秒。
+
+---
+
 ## 请求限制
 
 | 限制项 | 值 | 说明 |
@@ -83,7 +102,7 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 | 字数差值警告阈值 | 50 字 | 配对 SRT 与 TXT 字数差值超过 50 字时在日志中警告 |
 | 字数差值拒绝阈值 | 200 字 | 配对 SRT 与 TXT 字数差值超过 200 字时自动跳过该文件对 |
 | 支持的输入格式 | `.srt`（字幕） + `.txt`（文稿） | |
-| 输出格式 | `.lrc`（歌词） | 可通过转换工具转为 .srt |
+| 输出格式 | `.srt`（字幕） | 校准后直接返回 SRT，可用 `utils/` 工具转为 .lrc |
 | 轮询间隔建议 | ≥ 5 秒 | 建议 5 秒轮询一次任务状态 |
 | 单文件（不是单请求）超时 | 10 分钟 | 单个文件处理超过 10 分钟视为超时，跳过并继续下一组 |
 
@@ -97,7 +116,7 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 | 400 | 请求格式错误 | 参数缺失或格式不正确，或文件数量超过上限 |
 | 401 | 认证失败 | API Key 无效或缺失 |
 | 403 | 访问被拒绝 | 域名不在允许列表中 |
-| 404 | 资源不存在 | task_id 无效或文件不存在 |
+| 404 | 资源不存在 | task_id 无效或文件不存在；调用了不存在的端点（本 API 无 `/api/verify_key`）也返回 404 |
 | 409 | 文件校验失败 | 字数差值超过阈值或标点比例异常 |
 | 429 | 请求过于频繁 | IP 频率限制或每日配额用尽 |
 | 500 | 服务器内部错误 | 服务端异常，请稍后重试 |
@@ -147,63 +166,7 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 
 ---
 
-### 1. 验证 API Key（可选）
-
-验证 API Key 的有效性，并查询当前配额使用情况。
-
-**请求**
-
-```
-POST /v1/api/verify_key
-```
-
-**请求头**
-
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `X-API-Key` | 是 | API 密钥 |
-| `X-Ca-Timestamp` | 是 | 当前时间戳（毫秒），如 `1700000000000` |
-| `X-Ca-Nonce` | 是 | 全局唯一标识，如 `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
-
-**成功响应**
-
-```json
-{
-    "valid": true,
-    "usage_count": 42,
-    "daily_limit": 1000,
-    "remaining": 958
-}
-```
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `valid` | boolean | Key 是否有效 |
-| `usage_count` | number | 今日已使用次数 |
-| `daily_limit` | number | 每日限额（-1 表示无限制） |
-| `remaining` | number | 今日剩余次数（-1 表示无限制） |
-
-**失败响应**
-
-```json
-{
-    "valid": false,
-    "error": "Invalid API key"
-}
-```
-
-或配额用尽时：
-
-```json
-{
-    "valid": false,
-    "error": "Daily limit exceeded (1000/1000)"
-}
-```
-
----
-
-### 2. 上传文件
+### 1. 上传文件
 
 上传 SRT 字幕文件和 TXT 原始文稿，系统自动按文件名配对。
 
@@ -290,14 +253,14 @@ chapter1.srt ←→  chapter1.txt
             "diff": 2000
         }
     ],
-    "threshold": 400
+    "threshold": 200
 }
 ```
 当部分文件对被排除，剩余文件仍可继续处理时，响应中只包含剩余的 `srt_files` 和 `txt_files`。
 
 ---
 
-### 3. 启动校准
+### 2. 启动校准
 
 启动已上传文件的 AI 校准任务。
 
@@ -368,9 +331,9 @@ POST /v1/api/start_process
 
 ---
 
-### 4. 查询状态
+### 3. 查询状态
 
-查询校准任务的执行状态和结果。**结果直接在响应中返回 LRC 内容**。
+查询校准任务的执行状态和结果。**结果直接在响应中返回校准后的 SRT 内容**。
 
 **响应压缩**
 
@@ -406,10 +369,10 @@ GET /v1/api/status/{task_id}
     "current_file": "chapter1.srt",
     "results": [
         {
-            "name": "example.lrc",
-            "type": "LRC",
+            "name": "example.srt",
+            "type": "SRT",
             "error": null,
-            "content": "[00:00.00]校准后的歌词内容..."
+            "content": "1\n00:00:00,000 --> 00:00:04,999\n校准后的字幕内容\n"
         }
     ]
 }
@@ -424,26 +387,26 @@ GET /v1/api/status/{task_id}
     "total": 2,
     "results": [
         {
-            "name": "example.lrc",
-            "type": "LRC",
+            "name": "example.srt",
+            "type": "SRT",
             "error": null,
-            "content": "[00:00.00]校准后的歌词第一行\n[00:05.23]校准后的歌词第二行\n..."
+            "content": "1\n00:00:00,000 --> 00:00:04,999\n校准后的第一句字幕\n\n2\n00:00:05,000 --> 00:00:09,999\n校准后的第二句字幕\n..."
         },
         {
-            "name": "chapter1.lrc",
-            "type": "LRC",
+            "name": "chapter1.srt",
+            "type": "SRT",
             "error": null,
-            "content": "[00:00.00]另一段校准内容..."
+            "content": "1\n00:00:00,000 --> 00:00:04,999\n另一段校准内容\n..."
         }
     ],
     "accuracy_results": [
         {
-            "file": "example.lrc",
+            "file": "example.srt",
             "status": "normal",
             "stuck_line": 0
         },
         {
-            "file": "chapter1.lrc",
+            "file": "chapter1.srt",
             "status": "abnormal",
             "stuck_line": 5
         }
@@ -484,9 +447,9 @@ GET /v1/api/status/{task_id}
 | `total` | number | 总文件数 |
 | `current_file` | string | 当前正在处理的文件名（仅 `processing` 状态时有值） |
 | `results` | array | 结果列表 |
-| `results[].name` | string | 输出文件名（.lrc） |
-| `results[].type` | string | 结果类型：`LRC`（成功） / `ERROR`（失败） |
-| `results[].content` | string\|null | LRC 文件内容（成功时有值） |
+| `results[].name` | string | 输出文件名（.srt） |
+| `results[].type` | string | 结果类型：`SRT`（成功） / `ERROR`（失败） |
+| `results[].content` | string\|null | 校准后的 SRT 文件内容（成功时有值） |
 | `results[].error` | string\|null | 错误信息（失败时有值） |
 | `accuracy_results` | array | 内容匹配校验结果。仅在 `status=completed` 时返回。每个元素包含 `file`（文件名）、`status`（`"normal"` 或 `"abnormal"`）和 `stuck_line`（异常行号，0 表示正常，>0 表示校准在该行提前终止，请检查该序号附近的字幕与文稿内容）。`abnormal` 表示该文件的原字幕与原始文稿内容可能存在缺失或错位，请检查后重新提交。 |
 
@@ -596,15 +559,15 @@ curl https://api.yzbch.cn/v1/api/status/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
     "total": 1,
     "results": [
         {
-            "name": "example.lrc",
-            "type": "LRC",
+            "name": "example.srt",
+            "type": "SRT",
             "error": null,
-            "content": "[00:00.50]第一句校准后的歌词\n[00:05.23]第二句校准后的歌词\n[00:10.15]第三句校准后的歌词"
+            "content": "1\n00:00:00,000 --> 00:00:04,999\n第一句校准后的字幕\n\n2\n00:00:05,000 --> 00:00:09,999\n第二句校准后的字幕\n\n3\n00:00:10,000 --> 00:00:14,999\n第三句校准后的字幕\n"
         }
     ],
     "accuracy_results": [
         {
-            "file": "example.lrc",
+            "file": "example.srt",
             "status": "normal",
             "stuck_line": 0
         }
@@ -718,21 +681,21 @@ AI 无法识别句子边界，会导致严重的断句错误。
 
 | 类型 | 格式 | 说明 |
 |------|------|------|
-| 校准结果 | `.lrc` | LRC 歌词格式，时间轴精准对齐 |
+| 校准结果 | `.srt` | 校准后的 SRT 字幕，时间轴精准对齐，可直接使用 |
 
 ### 格式转换
 
-如需 SRT 格式，可使用本项目提供的转换工具：
+如需 LRC 格式（例如某些播放器只认歌词格式），可使用本项目提供的转换工具：
 
 **Python:**
 ```python
-from utils.lrc_srt_converter import lrc_to_srt
+from utils.lrc_srt_converter import srt_to_lrc
 
-srt_content = lrc_to_srt(lrc_content)
+lrc_content = srt_to_lrc(srt_content)
 ```
 
 **JavaScript:**
 ```javascript
-const { lrcToSrt } = require('./utils/lrc_srt_converter.js');
-const srtContent = lrcToSrt(lrcContent);
+const { srtToLrc } = require('./utils/lrc_srt_converter.js');
+const lrcContent = srtToLrc(srtContent);
 ```
