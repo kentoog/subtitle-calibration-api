@@ -24,6 +24,7 @@
   - [查询状态](#3-查询状态)
 - [完整调用流程](#完整调用流程)
 - [文件配对规则](#文件配对规则)
+- [调用前预检（推荐）](#调用前预检推荐)
 - [文稿格式要求](#文稿格式要求)
 - [输入输出格式](#输入输出格式)
 
@@ -72,7 +73,18 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 
 ## 调用规范（Agent 接入必读）
 
-1. **本 API 不提供 `/api/verify_key` 等 Key 预检端点。** Key 是否有效在首次上传时校验（401 即无效）。如需连通性探测，使用下方命令，期望返回 `404 {"error":"Invalid task_id"}` 即代表网络可达、鉴权头格式正确，**不消耗任何额度**：
+1. **调用前先本地预检（强烈推荐）。** 上传前用仓库自带脚本 `utils/srt_txt_precheck.py`（Python 3 零依赖，纯本地计算，不消耗配额、不发送任何数据）批量预检待校准文件组：
+
+   ```bash
+   # 成对传入（可同时传多组）
+   python utils/srt_txt_precheck.py example.srt example.txt chapter1.srt chapter1.txt
+   # 或按目录批量：同名 .srt / .txt（忽略大小写）自动配对
+   python utils/srt_txt_precheck.py --dir ./素材目录
+   ```
+
+   退出码 `0`（全部绿档）→ 直接按下方规范批量上传；退出码 `1` → 逐对查看输出中的 `gaps` 原文对照：差异仅为阿拉伯数字 / 英文写法差异可放行，确认为多读 / 漏读的先修文件；**橙档 / 红档 / mismatch 的文件不要直接调用**（会浪费配额与 10 分钟超时）。完整字段与判级规则见[调用前预检](#调用前预检推荐)。
+
+2. **本 API 不提供 `/api/verify_key` 等 Key 预检端点。** Key 是否有效在首次上传时校验（401 即无效）。如需连通性探测，使用下方命令，期望返回 `404 {"error":"Invalid task_id"}` 即代表网络可达、鉴权头格式正确，**不消耗任何额度**：
 
    ```bash
    curl -s -X GET https://api.yzbch.cn/v1/api/status/probe-connectivity \
@@ -81,11 +93,11 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
      -H "X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')"
    ```
 
-2. **批量优先，避免逐文件请求。** 单次 `upload_analyze` 请求可同时携带**多组** SRT+TXT 文件（同名自动配对，单次 ≤100 个文件 / ≤50 组）。请把待校准的文件**一次性批量上传**，不建议多次单文件发送请求——批量处理一次请求完成配对校验，显著节省双方网络与服务资源。
+3. **批量优先，避免逐文件请求。** 单次 `upload_analyze` 请求可同时携带**多组** SRT+TXT 文件（同名自动配对，单次 ≤100 个文件 / ≤50 组）。请把待校准的文件**一次性批量上传**，不建议多次单文件发送请求——批量处理一次请求完成配对校验，显著节省双方网络与服务资源。
 
-3. **建议 gzip 压缩上传。** `upload_analyze` 支持压缩上传：表单附带 `compress=gzip` 字段时，`files` 中各文件以 gzip 压缩内容传输，服务端自动解压。文本类 SRT/TXT 压缩率高，批量多文件或大文件场景建议开启，可大幅降低传输体积。
+4. **建议 gzip 压缩上传。** `upload_analyze` 支持压缩上传：表单附带 `compress=gzip` 字段时，`files` 中各文件以 gzip 压缩内容传输，服务端自动解压。文本类 SRT/TXT 压缩率高，批量多文件或大文件场景建议开启，可大幅降低传输体积。
 
-4. **注意步骤间延时**（详见[请求限制](#请求限制)与[完整调用流程](#完整调用流程)）：上传 → 启动 ≥1 秒，启动 → 首次轮询 ≥1 秒，轮询间隔 ≥5 秒。
+5. **注意步骤间延时**（详见[请求限制](#请求限制)与[完整调用流程](#完整调用流程)）：上传 → 启动 ≥1 秒，启动 → 首次轮询 ≥1 秒，轮询间隔 ≥5 秒。
 
 ---
 
@@ -627,6 +639,59 @@ SRT 字幕文件中的格式内容（行号、时间轴、括号注释）在计�
 | `x.srt` | (无) | ❌ 缺少文稿，x.srt 将报错 |
 
 > 配对失败的文件在结果中 `type` 为 `ERROR`，`error` 字段说明原因。
+
+---
+
+## 调用前预检（推荐）
+
+上传前建议先用仓库自带脚本 `utils/srt_txt_precheck.py` 在本地对 SRT+TXT 文件组做整句差异预检：Python 3 标准库实现、零依赖、纯本地计算（不消耗配额、不发送任何数据），判级口径与前端页面的输入预检一致。
+
+**用法**
+
+```bash
+# 成对传入，可同时传多组
+python utils/srt_txt_precheck.py example.srt example.txt chapter1.srt chapter1.txt
+# 或按目录批量：同名 .srt / .txt（忽略大小写）自动配对
+python utils/srt_txt_precheck.py --dir ./素材目录
+# --brief 输出单行摘要（默认输出完整 JSON 数组）
+python utils/srt_txt_precheck.py --dir ./素材目录 --brief
+```
+
+> 脚本也可从站点直链获取：`https://www.yzbch.cn/srt_txt_precheck.py`
+
+**判级与处置建议**
+
+| 档位 | label | 判定条件 | advice |
+|------|-------|---------|--------|
+| 绿（level 1） | `内容一致` | 相似度 ≥90% 且 0 处整句差异 | `可直接校准` |
+| 琥珀（level 2） | `轻微差异` | 相似度 80–90%，或恰好 1 处整句差异（`有整句差异`） | `建议抽查`（数字/英文写法差异可放行） |
+| 橙（level 3） | `需核对差异` | 相似度 60–80% | `先修字幕` |
+| 红（level 4） | `内容不符` / `多处整句差异` / `整段明显缺失` | 相似度 <60%，或整句差异 ≥2 处，或缺口字数达较短文本的 10% | `建议换文件` / 先修文件，不要直接调用 |
+
+**输出字段（JSON 数组，每组文件对为一个对象）**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `files` | object | 本组 srt / txt 文件路径 |
+| `state` | string | `done` / `mismatch` / `empty` / `error` |
+| `pct` / `pct_text` | number / string | 综合相似度，如 `94.2` / `"94.2%"` |
+| `level` | number | 档位 1–4；异常时为 0 |
+| `label` / `advice` | string | 档位标签与建议动作（见上表） |
+| `basis` | string | 判级依据：`"pct"`（相似度）或 `"struct"`（整句差异压档） |
+| `stats` | object | `norm_a` / `norm_b`（归一化字数）、`dice`、`lcs`、`gap_count`、`gap_chars`、`max_run`、`aborted` |
+| `gaps[]` | array | 整句差异详情（最多列 3 处）：`index`（SRT 条号）、`type`（`srt_extra` / `txt_extra` / `both`）、`direction`（疑似字幕多读 / 漏读）、`time`（时码）、`anchor`（锚点词）、`srt_text` / `txt_text`（两侧原文对照）、`a_len` / `b_len` / `len` |
+| `gap_details_hidden` | number | 未展开列出的整句差异数（gaps 只显示前 3 处） |
+| `summary` | string | 单行摘要（`--brief` 每行内容），差异处多时带 `[整句差异压档]` 前缀与位置列表 |
+
+**退出码**
+
+| 退出码 | 含义 |
+|--------|------|
+| 0 | 全部绿档，可直接调用 API |
+| 1 | 存在琥珀 / 橙 / 红档或 mismatch / empty / error，逐对看 `gaps` 后再决定 |
+| 2 | 用法错误（参数缺失、文件不存在等） |
+
+> **人工判断辅助**：差异处仅为阿拉伯数字（如"一百二十三" vs "123"）或英文写法差异时可放行；确认为多读 / 漏读的先修正文件再上传。完整字段与算法说明见脚本头部 docstring。
 
 ---
 

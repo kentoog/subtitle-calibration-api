@@ -8,7 +8,7 @@
       "type": "function",
       "function": {
         "name": "subtitle_calibration_align",
-        "description": "基于原始 TXT 文稿对 AI 识别生成的 SRT 字幕进行逐字校准，输出 100% 与文稿一致的 LRC 字幕，时间轴精准对齐。注意：本工具依赖原始文稿输入，不做纯音频波形对齐。适用于有完整文稿的有声书、课程、TTS 音频的字幕校对场景。",
+        "description": "基于原始 TXT 文稿对 AI 识别生成的 SRT 字幕进行逐字校准，输出 100% 与文稿一致的校准后 SRT 字幕（时间轴精准对齐，可直接使用，也可用 utils/ 工具转 LRC）。注意：本工具依赖原始文稿输入，不做纯音频波形对齐。适用于有完整文稿的有声书、课程、TTS 音频的字幕校对场景。调用前强烈建议先用仓库 utils/srt_txt_precheck.py 对输入做本地预检（零配额），退出码 0（全绿档）再调用。",
         "parameters": {
           "type": "object",
           "properties": {
@@ -69,12 +69,7 @@
     "query_status": {
       "method": "GET",
       "path": "/api/status/{task_id}",
-      "description": "轮询任务状态与结果，status 为 completed 时 results[].content 包含 LRC 内容"
-    },
-    "verify_key": {
-      "method": "POST",
-      "path": "/api/verify_key",
-      "description": "验证 API Key 有效性并查询剩余配额（可选）"
+      "description": "轮询任务状态与结果，status 为 completed 时 results[].content 包含校准后的 SRT 内容（results[].type 为 SRT）"
     }
   },
 
@@ -83,8 +78,8 @@
     "script": ".txt (原始文稿，需含标点符号)"
   },
   "output_format": {
-    "type": "LRC",
-    "description": "LRC 歌词格式，可通过 utils/ 中的转换工具转为 SRT"
+    "type": "SRT",
+    "description": "校准后的 SRT 字幕（results[].content），时间轴精准对齐，可直接使用；如需 LRC 可用 utils/ 中的 srt_to_lrc 转换"
   },
 
   "typical_use_cases": [
@@ -100,5 +95,20 @@
     "SRT 与 TXT 字数差值超过 200 字时自动跳过该文件对"
   ],
 
-  "quick_test_curl": "curl -X POST https://api.yzbch.cn/v1/api/verify_key -H \"X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ\" -H \"X-Ca-Timestamp: $(date +%s%3N)\" -H \"X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')\""
+  "quick_test_curl": "curl -X GET https://api.yzbch.cn/v1/api/status/probe-connectivity -H \"X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ\" -H \"X-Ca-Timestamp: $(date +%s%3N)\" -H \"X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')\"  # 返回 Invalid task_id 说明网络与鉴权头正常，消耗 0 次额度",
+
+  "precheck": {
+    "script": "utils/srt_txt_precheck.py",
+    "description": "调用前本地预检脚本：Python 3 零依赖，纯本地计算，不消耗 API 配额；批量判级 SRT/TXT 文件组是否适合校准，判级口径与处置建议详见 API.md「调用前预检」章节",
+    "usage": "python utils/srt_txt_precheck.py --dir ./素材目录   # 或成对传入 srt txt 文件（可多组）；加 --brief 输出单行摘要",
+    "exit_codes": {
+      "0": "全部绿档，可直接调用本工具",
+      "1": "存在琥珀/橙/红档或 mismatch/empty/error，检查输出 gaps 原文对照后再决定（数字/英文写法差异可放行）",
+      "2": "用法错误（参数缺失、文件不存在等）"
+    },
+    "download_urls": [
+      "https://www.yzbch.cn/srt_txt_precheck.py",
+      "https://raw.githubusercontent.com/kentoog/subtitle-calibration-api/main/utils/srt_txt_precheck.py"
+    ]
+  }
 }

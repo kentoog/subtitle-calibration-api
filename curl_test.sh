@@ -11,6 +11,9 @@
 #   - curl, uuidgen (Linux/macOS 内置, Windows Git Bash 可用)
 #
 # 调用规范提示:
+#   - 上传前会先用仓库 utils/srt_txt_precheck.py 做本地输入预检（Python 3 零依赖，不耗配额）。
+#     预检未通过（退出码非 0，含琥珀/橙/红档）时中止；确认差异仅为数字/英文写法可忽略时，
+#     用 SKIP_PRECHECK=1 ./curl_test.sh ... 跳过预检。
 #   - 本脚本演示单组文件调用；实际使用建议单次请求批量携带多组文件（≤100 文件 / 50 组），
 #     不建议多次单文件发送请求，以节省资源。
 #   - 大文件建议 gzip 压缩后上传，并在表单中附带 compress=gzip 字段（服务端自动解压）。
@@ -41,17 +44,36 @@ echo "  SRT:    ${SRT_FILE}"
 echo "  TXT:    ${TXT_FILE}"
 echo "============================================"
 
-# ----- Step 0: 连通性探测（不消耗校准额度）-----
+# ----- Step 0: 输入预检（本地运行，不消耗额度）-----
+# 用仓库自带 utils/srt_txt_precheck.py 检查 SRT/TXT 是否适合校准（判级与处置见 API.md）。
+# 退出码非 0（存在琥珀/橙/红档或异常）时中止；若差异仅为数字/英文写法，可 SKIP_PRECHECK=1 跳过。
+if [ "${SKIP_PRECHECK:-0}" = "1" ]; then
+    echo "[Step 0] SKIP_PRECHECK=1，跳过输入预检。"
+elif [ -f "utils/srt_txt_precheck.py" ]; then
+    echo ""
+    echo "[Step 0] 输入预检（本地，不耗额度）..."
+    if ! python3 utils/srt_txt_precheck.py "${SRT_FILE}" "${TXT_FILE}" --brief; then
+        echo ""
+        echo "[中止] 预检未通过：请核对摘要与 gaps 原文对照。"
+        echo "       若差异仅为数字/英文写法可忽略，用 SKIP_PRECHECK=1 重新运行本脚本跳过预检。"
+        exit 1
+    fi
+else
+    echo ""
+    echo "[Step 0] 未找到 utils/srt_txt_precheck.py，跳过预检（建议从仓库获取后先预检）。"
+fi
+
+# ----- Step 1: 连通性探测（不消耗校准额度）-----
 # 说明: 本 API 不提供 /api/verify_key 端点（Key 有效性在首次上传时校验）。
 # 返回 {"error":"Invalid task_id"} 即代表网络可达、鉴权头格式正确。
 echo ""
-echo "[Step 0] 连通性探测..."
+echo "[Step 1] 连通性探测..."
 eval curl -s $(gen_headers) "${API_BASE}/api/status/probe-connectivity" | python3 -m json.tool 2>/dev/null || \
 eval curl -s $(gen_headers) "${API_BASE}/api/status/probe-connectivity"
 echo ""
 
-# ----- Step 1: 上传文件 -----
-echo "[Step 1] 上传文件..."
+# ----- Step 2: 上传文件 -----
+echo "[Step 2] 上传文件..."
 UPLOAD_RESP=$(eval curl -s $(gen_headers) \
     -F "files=@${SRT_FILE}" \
     -F "files=@${TXT_FILE}" \
@@ -68,9 +90,9 @@ echo "  → task_id: ${TASK_ID}"
 # 频率限制等待
 sleep 1
 
-# ----- Step 2: 启动校准 -----
+# ----- Step 3: 启动校准 -----
 echo ""
-echo "[Step 2] 启动校准..."
+echo "[Step 3] 启动校准..."
 eval curl -s $(gen_headers) \
     -H "Content-Type: application/json" \
     -d "{\"task_id\": \"${TASK_ID}\", \"read_parentheses\": true}" \
@@ -78,9 +100,9 @@ eval curl -s $(gen_headers) \
 
 sleep 1
 
-# ----- Step 3: 轮询结果 -----
+# ----- Step 4: 轮询结果 -----
 echo ""
-echo "[Step 3] 轮询结果..."
+echo "[Step 4] 轮询结果..."
 MAX_ATTEMPTS=30
 ATTEMPT=0
 while [ ${ATTEMPT} -lt ${MAX_ATTEMPTS} ]; do

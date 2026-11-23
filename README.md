@@ -87,6 +87,7 @@ sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ
 > - 轮询间隔：≥ 5 秒
 
 > 💡 **调用规范（Agent 接入必读）**
+> - **预检先行**：上传前用仓库 `utils/srt_txt_precheck.py`（Python 3 零依赖，本地运行、不耗配额）批量预检输入组，全绿档（退出码 0）再上传；红档 / mismatch 先修文件。详见 [API.md · 调用前预检](API.md#调用前预检推荐)。
 > - 本 API **不提供 `/api/verify_key` 等 Key 预检端点**，Key 有效性在首次上传时校验；连通性探测用 `GET /api/status/probe-connectivity`（期望 404 `Invalid task_id`，不耗额度）。
 > - **批量优先**：单次请求可携带多组 SRT+TXT 文件（≤100 文件 / 50 组，同名自动配对），不建议多次单文件发送请求，以节省资源。
 > - **建议 gzip 压缩上传**：表单附带 `compress=gzip` 字段，各文件以 gzip 压缩内容传输，服务端自动解压。
@@ -150,7 +151,7 @@ while True:
 |------|------|
 | [API.md](API.md) | 完整 API 接口文档（请求格式、参数、返回值、错误码） |
 | [examples/](examples/) | Python / JavaScript 调用示例 |
-| [utils/](utils/) | LRC↔SRT 转换工具函数（Python / JavaScript） |
+| [utils/](utils/) | LRC↔SRT 转换工具函数（Python / JavaScript）；调用前预检脚本 [srt_txt_precheck.py](utils/srt_txt_precheck.py)（Agent 推荐） |
 | [LICENSE](LICENSE) | MIT 开源协议 |
 
 ---
@@ -163,7 +164,7 @@ while True:
 | `/v1/api/start_process` | POST | 启动校准任务 |
 | `/v1/api/status/{task_id}` | GET | 查询任务状态与结果（返回校准后的 SRT 内容）；亦可用作连通性探测 |
 
-> 详见 [API.md](API.md)（含调用规范：无 verify_key 端点、批量优先、gzip 压缩建议）
+> 详见 [API.md](API.md)（含调用规范：预检先行、无 verify_key 端点、批量优先、gzip 压缩建议）
 
 ---
 
@@ -310,6 +311,7 @@ curl -X POST https://api.yzbch.cn/v1/api/upload_analyze \
 | 字数差异超过多少会跳过？ | SRT 与 TXT 字数差超过 200 字时跳过该文件对 |
 | 是否需要处理标点？ | 文稿必须包含规范标点，空格分隔的文稿不适用 |
 | 有 API 调用限制吗？ | 同一 IP 每秒最多 1 次请求 |
+| 校准前需要预检吗？ | 非必须但强烈推荐：用 `utils/srt_txt_precheck.py` 本地预检（零配额），红档文件直接调用会浪费配额 |
 
 ## License
 
