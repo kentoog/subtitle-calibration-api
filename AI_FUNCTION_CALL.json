@@ -92,7 +92,7 @@
   "limitations": [
     "必须有原始 TXT 文稿，纯音频场景不适用",
     "单文件最大 40,000 汉字",
-    "SRT 与 TXT 字数差值超过 200 字时自动跳过该文件对"
+    "SRT 与 TXT 字数差值超过 400 字时自动跳过该文件对"
   ],
 
   "quick_test_curl": "curl -X GET https://api.yzbch.cn/v1/api/status/probe-connectivity -H \"X-API-Key: sk-vMw7Y25rAbc8NG9Wr0iNacVGKYn4xmOS6FuXDodmavpLzquJ\" -H \"X-Ca-Timestamp: $(date +%s%3N)\" -H \"X-Ca-Nonce: $(uuidgen | tr '[:upper:]' '[:lower:]')\"  # 返回 Invalid task_id 说明网络与鉴权头正常，消耗 0 次额度",
